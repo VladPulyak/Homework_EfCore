@@ -49,18 +49,14 @@ namespace Homework_EfCore.Services
         }
         public static async Task<List<UserBooksInfo>> GetUserBooks(MyDBContext context)
         {
-            var listWithUserBooksInfo = new List<UserBooksInfo>();
-            var listWithUserBooks = context.UserBooks.Include(q => q.User).Include(q => q.Book).Include(q => q.Book.Author).ToList();
-            foreach (var userbook in listWithUserBooks)
+            var listWithUserBooksInfo = await context.UserBooks.Select(q => new UserBooksInfo
             {
-                var userBookInfo = new UserBooksInfo();
-                userBookInfo.UserFullName = userbook.User.FirstName + " " + userbook.User.LastName;
-                userBookInfo.UserBirthDate = userbook.User.BirthDate;
-                userBookInfo.BookName = userbook.Book.Name;
-                userBookInfo.BookYear = userbook.Book.Year;
-                userBookInfo.AuthorFullName = userbook.Book.Author.FirstName + " " + userbook.Book.Author.LastName;
-                listWithUserBooksInfo.Add(userBookInfo);
-            }
+                UserFullName = q.User.FirstName + " " + q.User.LastName,
+                BookName = q.Book.Name,
+                UserBirthDate = q.User.BirthDate,
+                AuthorFullName = q.Book.Author.FirstName + " " + q.Book.Author.LastName,
+                BookYear= q.Book.Year,
+            }).ToListAsync();
             return listWithUserBooksInfo;
         }
         public static async Task<List<string>> DeleteUsersWithoutBooks(MyDBContext context)
