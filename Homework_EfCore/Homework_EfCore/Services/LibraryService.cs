@@ -1,91 +1,98 @@
-﻿using Homework_EfCore.Models;
+﻿using Homework_EfCore.Interfaces;
+using Homework_EfCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Homework_EfCore.Services
 {
-    public static class LibraryService
+    public class LibraryService : ILibraryService
     {
-        public static async Task AddUser(MyDBContext context,Users user)
+        private readonly MyDBContext _context;
+        public LibraryService(MyDBContext context)
         {
-            await context.Users.AddAsync(user);
-            context.SaveChanges();
+            _context = context;
         }
-        public static async Task<List<Users>> GetUsers(MyDBContext context)
+        public async Task<Users> AddUser(Users user)
         {
-            var users = await context.Users.ToListAsync();
+            await _context.Users.AddAsync(user);
+            _context.SaveChanges();
+            return user;
+        }
+        public async Task<List<Users>> GetUsers()
+        {
+            var users = await _context.Users.ToListAsync();
             return users;
         }
-        public static async Task AddBook(MyDBContext context, Books book, string authorFirstName, string authorLastName)
+        public async Task<Books> AddBook(Books book, string authorFirstName, string authorLastName)
         {
-            var author = await context.Authors.Where(q => q.FirstName == authorFirstName && q.LastName == authorLastName).SingleOrDefaultAsync();
+            var author = await _context.Authors.Where(q => q.FirstName == authorFirstName && q.LastName == authorLastName).SingleOrDefaultAsync();
             book.AuthorId = author.AuthorId;
-            await context.Books.AddAsync(book);
-            context.SaveChanges();
+            await _context.Books.AddAsync(book);
+            _context.SaveChanges();
+            return book;
         }
-        public static async Task<List<Books>> GetBooks(MyDBContext context)
+        public async Task<List<Books>> GetBooks()
         {
-            var books = await context.Books.ToListAsync();
+            var books = await _context.Books.ToListAsync();
             return books;
         }
-        public static async Task AddAuthor(MyDBContext context,Authors author)
+        public async Task<Authors> AddAuthor(Authors author)
         {
-            await context.Authors.AddAsync(author);
-            context.SaveChanges();
+            await _context.Authors.AddAsync(author);
+            _context.SaveChanges();
+            return author;
         }
-        public static async Task<List<Authors>> GetAuthors(MyDBContext context)
+        public async Task<List<Authors>> GetAuthors()
         {
-            var authors = await context.Authors.ToListAsync();
+            var authors = await _context.Authors.ToListAsync();
             return authors;
         }
-        public static async Task TakeBook(MyDBContext context, Books book, string userEmail, string authorFirstName, string authorLastName)
+        public async Task<UserBooks> TakeBook(Books book, string userEmail, string authorFirstName, string authorLastName)
         {
             var userBooks = new UserBooks();
-            userBooks.UserId = context.Users.Single(q => q.Email == userEmail).UserId;
-            var authorIdOfCurrentBook = context.Authors.Single(q => (q.FirstName == authorFirstName) && (q.LastName == authorLastName)).AuthorId;
-            userBooks.BookId = context.Books.Where(q => (q.Name == book.Name) && (q.AuthorId == authorIdOfCurrentBook) && (q.Year == book.Year)).Single().BookId;
-            await context.UserBooks.AddAsync(userBooks);
-            context.SaveChanges();
+            userBooks.UserId = _context.Users.Single(q => q.Email == userEmail).UserId;
+            var authorIdOfCurrentBook = _context.Authors.Single(q => (q.FirstName == authorFirstName) && (q.LastName == authorLastName)).AuthorId;
+            userBooks.BookId = _context.Books.Where(q => (q.Name == book.Name) && (q.AuthorId == authorIdOfCurrentBook) && (q.Year == book.Year)).Single().BookId;
+            await _context.UserBooks.AddAsync(userBooks);
+            _context.SaveChanges();
+            return userBooks;
         }
-        public static async Task<List<UserBooksInfo>> GetUserBooks(MyDBContext context)
+        public async Task<List<UserBooksInfo>> GetUserBooks()
         {
-            var listWithUserBooksInfo = new List<UserBooksInfo>();
-            var listWithUserBooks = context.UserBooks.Include(q => q.User).Include(q => q.Book).Include(q => q.Book.Author).ToList();
-            foreach (var userbook in listWithUserBooks)
+            var listWithUserBooksInfo = await _context.UserBooks.Select(q => new UserBooksInfo
             {
-                var userBookInfo = new UserBooksInfo();
-                userBookInfo.UserFullName = userbook.User.FirstName + " " + userbook.User.LastName;
-                userBookInfo.UserBirthDate = userbook.User.BirthDate;
-                userBookInfo.BookName = userbook.Book.Name;
-                userBookInfo.BookYear = userbook.Book.Year;
-                userBookInfo.AuthorFullName = userbook.Book.Author.FirstName + " " + userbook.Book.Author.LastName;
-                listWithUserBooksInfo.Add(userBookInfo);
-            }
+                UserFullName = q.User.FirstName + " " + q.User.LastName,
+                BookName = q.Book.Name,
+                UserBirthDate = q.User.BirthDate,
+                AuthorFullName = q.Book.Author.FirstName + " " + q.Book.Author.LastName,
+                BookYear = q.Book.Year,
+            }).ToListAsync();
             return listWithUserBooksInfo;
         }
-        public static async Task<List<string>> DeleteUsersWithoutBooks(MyDBContext context)
+        public async Task<List<string>> DeleteUsersWithoutBooks()
         {
             var fullNameOFDeletedUser = new List<string>();
-            var listWithUserBooks = await context.UserBooks.ToListAsync();
-            var listWithUsers = await context.Users.ToListAsync();
+            var listWithUserBooks = await _context.UserBooks.ToListAsync();
+            var listWithUsers = await _context.Users.ToListAsync();
             foreach (var user in listWithUsers)
             {
                 var listWithDeletedUsers = listWithUserBooks.Where(q => q.UserId == user.UserId);
                 if (listWithDeletedUsers.IsNullOrEmpty())
                 {
                     fullNameOFDeletedUser.Add(user.FirstName + " " + user.LastName);
-                    context.Users.Remove(user);
+                    _context.Users.Remove(user);
                 }
             }
-            context.SaveChanges();
+            _context.SaveChanges();
             return fullNameOFDeletedUser;
         }
-        public static async Task ReturnBook(MyDBContext context, string userEmail, string bookName)
+        public async Task<Books> ReturnBook(string userEmail, string bookName)
         {
-            var listWithUserBooks = await context.UserBooks.Include(q => q.User).Include(q => q.Book).ToListAsync();
-            var deletedUser = await context.UserBooks.Where(q => q.User.Email == userEmail && q.Book.Name == bookName).SingleAsync();
-            context.UserBooks.Remove(deletedUser);
-            context.SaveChanges();
+            var listWithUserBooks = await _context.UserBooks.Include(q => q.User).Include(q => q.Book).ToListAsync();
+            var deletedUser = listWithUserBooks.Where(q => q.User.Email == userEmail && q.Book.Name == bookName).Single();
+            _context.UserBooks.Remove(deletedUser);
+            _context.SaveChanges();
+            return deletedUser.Book;
         }
     }
 }

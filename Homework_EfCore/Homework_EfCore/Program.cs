@@ -1,14 +1,13 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Reflection;
+using Homework_EfCore;
+using Homework_EfCore.Extensions;
 
-builder.Services.AddControllersWithViews();
-
-var app = builder.Build();
-
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.MapControllerRoute("default",
-                       "{controller=Home}/{action=Index}/{id?}");
-
-app.Run();
+CreateHostBuilder(args).Build().Run();
+static IHostBuilder CreateHostBuilder(string[] args)
+{
+    return Host.CreateDefaultBuilder(args)
+               .ConfigureWebHostDefaults(webBuilder =>
+               {
+                   webBuilder.UseStartup<Startup>();
+               });
+}

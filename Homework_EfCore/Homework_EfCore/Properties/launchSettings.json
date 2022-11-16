@@ -1,9 +1,11 @@
 ﻿{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "Homework_EfCore": {
       "commandName": "Project",
-      "dotnetRunMessages": true,
       "launchBrowser": true,
+      "launchUrl": "swagger/index.html",
+      "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5001",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

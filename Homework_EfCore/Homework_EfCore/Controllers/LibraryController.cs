@@ -1,4 +1,5 @@
-﻿using Homework_EfCore.Models;
+﻿using Homework_EfCore.Interfaces;
+using Homework_EfCore.Models;
 using Homework_EfCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,107 +9,66 @@ using System.Text;
 
 namespace Homework_EfCore.Controllers
 {
-    public class LibraryController : Controller
+    [ApiController]
+    [Route("[controller]")]
+    public class LibraryController : ControllerBase
     {
-        public IActionResult Index()
+        private readonly ILibraryService _libraryService;
+
+        public LibraryController(ILibraryService libraryService)
         {
-            return View();
-        }
-        [HttpGet]
-        public IActionResult AddUser()
-        {
-            return View();
-        }
-        [HttpPost]
-        public async Task<IActionResult> AddUser(Users user)
-        {
-            using var context = new MyDBContext();
-            await LibraryService.AddUser(context, user);
-            return RedirectToAction("GetUsers");
-        }
-        public async Task<IActionResult> GetUsers()
-        {
-            using var context = new MyDBContext();
-            var users = await LibraryService.GetUsers(context);
-            return View(users);
-        }
-        [HttpGet]
-        public IActionResult AddBook()
-        {
-            return View();
-        }
-        [HttpPost]
-        public async Task<IActionResult> AddBook(Books book, string authorFirstName, string authorLastName)
-        {
-            using var context = new MyDBContext();
-            await LibraryService.AddBook(context, book, authorFirstName, authorLastName);
-            return RedirectToAction("GetBooks");
-        }
-        public async Task<IActionResult> GetBooks()
-        {
-            using var context = new MyDBContext();
-            var books = await LibraryService.GetBooks(context);
-            return View(books);
-        }
-        public async Task<IActionResult> GetAuthors()
-        {
-            using var context = new MyDBContext();
-            var authors = await LibraryService.GetAuthors(context);
-            return View(authors);
-        }
-        [HttpGet]
-        public IActionResult AddAuthor()
-        {
-            return View();
-        }
-        [HttpPost]
-        public async Task<IActionResult> AddAuthor(Authors author)
-        {
-            using var context = new MyDBContext();
-            await LibraryService.AddAuthor(context, author);
-            return RedirectToAction("GetAuthors");
-        }
-        [HttpPost]
-        public async Task<IActionResult> TakeBook(Books book, string userEmail, string authorFirstName, string authorLastName)
-        {
-            using var context = new MyDBContext();
-            await LibraryService.TakeBook(context, book, userEmail, authorFirstName, authorLastName);
-            return RedirectToAction("GetUserBooks");
-        }
-        [HttpGet]
-        public IActionResult TakeBook()
-        {
-            return View();
-        }
-        public async Task<IActionResult> GetUserBooks()
-        {
-            using var context = new MyDBContext();
-            var listWithUserBooksInfo = await LibraryService.GetUserBooks(context);
-            return View(listWithUserBooksInfo);
+            _libraryService = libraryService;
         }
 
-        public async Task<IActionResult> DeleteUsersWithoutBooks()
+        [HttpPost("/AddUser")]
+        public async Task<Users> AddUser([FromForm] Users user)
         {
-            using var context = new MyDBContext();
-            var fullNameOFDeletedUser = await LibraryService.DeleteUsersWithoutBooks(context);
-            if (fullNameOFDeletedUser.IsNullOrEmpty())
-            {
-                return RedirectToAction("GetUsers");
-            }
-            return View("DeleteUsersWithoutBooks", fullNameOFDeletedUser);
+            return await _libraryService.AddUser(user);
         }
-        [HttpGet]
-        public IActionResult ReturnBook()
+        [HttpGet("/GetUsers")]
+        public async Task<List<Users>> GetUsers()
         {
-            return View();
+            return await _libraryService.GetUsers();
         }
-        [HttpPost]
-        public async Task<IActionResult> ReturnBook(string userEmail, string bookName)
+        [HttpPost("/AddBook")]
+        public async Task<Books> AddBook([FromBody] Books book, [FromForm] string authorFirstName, [FromForm] string authorLastName)
         {
-            var context = new MyDBContext();
-            await LibraryService.ReturnBook(context, userEmail, bookName);
-            return RedirectToAction("GetUserBooks");
+            return await _libraryService.AddBook(book, authorFirstName, authorLastName);
         }
-
+        [HttpGet("/GetBooks")]
+        public async Task<List<Books>> GetBooks()
+        {
+            return await _libraryService.GetBooks();
+        }
+        [HttpGet("/GetAuthors")]
+        public async Task<List<Authors>> GetAuthors()
+        {
+            return await _libraryService.GetAuthors();
+        }
+        [HttpPost("/AddAuthor")]
+        public async Task<Authors> AddAuthor([FromBody] Authors author)
+        {
+            return await _libraryService.AddAuthor(author);
+        }
+        [HttpPost("/TakeBook/{userEmail}/{authorFirstName}/{authorLastName}")]
+        public async Task<UserBooks> TakeBook([FromBody] Books book, [FromRoute] string userEmail, [FromRoute] string authorFirstName, [FromRoute] string authorLastName)
+        {
+            return await _libraryService.TakeBook(book, userEmail, authorFirstName, authorLastName);
+        }
+        [HttpGet("/GetUserBooks")]
+        public async Task<List<UserBooksInfo>> GetUserBooks()
+        {
+            return await _libraryService.GetUserBooks();
+        }
+        [HttpDelete("/DeleteUsersWithoutBooks")]
+        public async Task<List<string>> DeleteUsersWithoutBooks()
+        {
+            return await _libraryService.DeleteUsersWithoutBooks();
+        }
+        [HttpPut("/ReturnBook/{userEmail}/{bookName}")]
+        public async Task<Books> ReturnBook([FromRoute] string userEmail, [FromRoute] string bookName)
+        {
+            return await _libraryService.ReturnBook(userEmail, bookName);
+        }
     }
 }
